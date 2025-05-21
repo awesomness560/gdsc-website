@@ -20,7 +20,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           <span className="text-gdscyellow">C</span>
         </div>
         {/* Slight blur for depth */}
-        <div className="absolute inset-0"></div>
+        <div className="absolute inset-0 backdrop-blur-md"></div>
       </div>
       <div className="relative z-10">
         <div className="flex flex-col items-center justify-center min-h-screen text-center px-4 sm:px-6 lg:px-8">
