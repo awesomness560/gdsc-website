@@ -64,7 +64,7 @@ function Button({
       className={cn(buttonVariants({ variant, size, className }))}
       {...props}
     >
-      {arrow && <ArrowRight className="text-white"/>}
+      {arrow && <ArrowRight className="text-black"/>}
       {children}
     </Comp>
   );
