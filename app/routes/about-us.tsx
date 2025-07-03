@@ -2,6 +2,9 @@ import { useState, useEffect } from "react";
 import NavBar from "~/components/ui/NavBar";
 import GlassContainer from "~/components/ui/GlassContainer";
 import AnimatedSection from "~/components/ui/AnimatedSection";
+import PersonCard from "~/components/ui/PersonCard";
+import ImpactStat from "~/components/ui/ImpactStat";
+import SectionHeader from "~/components/ui/SectionHeader";
 import {
   Users,
   Code,
@@ -9,7 +12,6 @@ import {
   Globe,
   Heart,
   Target,
-  Eye,
   Star,
   TrendingUp,
   UserPlus,
@@ -19,6 +21,10 @@ import {
   Megaphone,
   Briefcase,
   Laptop,
+  Settings,
+  Award,
+  BookOpen,
+  Coffee,
 } from "lucide-react";
 
 export default function About() {
@@ -29,7 +35,7 @@ export default function About() {
     setTimeout(() => setIsLoaded(true), 100);
   }, []);
 
-  // Leadership data structure
+  // Leadership data structure with Administrative Director added
   const leadership = {
     president: {
       name: "Sannidhya Tiwari Tiwari",
@@ -75,65 +81,68 @@ export default function About() {
         major: "Business Administration",
         year: "Junior",
       },
+      {
+        name: "Meet Shah",
+        role: "Administrative Director",
+        committee: "Administrative",
+        image:
+          "https://res.cloudinary.com/startup-grind/image/upload/c_fill,w_250,h_250,g_center/c_fill,dpr_2.0,f_auto,g_center,q_auto:good/v1/gcs/platform-data-goog/avatars/meet_shah.jpeg",
+        major: "Information Systems",
+        year: "Junior",
+      },
     ],
   };
 
   const officers = {
     technical: [
       {
-        name: "Jessica Liu",
+        name: "Put name here",
         role: "Workshop Coordinator",
-        image:
-          "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=300&h=300&fit=crop&crop=face&auto=format",
+        image: "",
         specialties: ["React", "Python", "AI/ML"],
       },
       {
-        name: "Ryan Thompson",
-        role: "Content Developer",
-        image:
-          "https://images.unsplash.com/photo-1519244703995-f4e0f30006d5?w=300&h=300&fit=crop&crop=face&auto=format",
+        name: "Put name here",
+        role: "Workshop Coordinator",
+        image: "",
         specialties: ["Node.js", "Cloud", "DevOps"],
       },
     ],
     marketing: [
       {
-        name: "Priya Patel",
-        role: "Social Media Officer",
-        image:
-          "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&h=300&fit=crop&crop=face&auto=format",
+        name: "Put name here",
+        role: "Marketing Officer",
+        image: "",
         specialties: ["Content Creation", "Instagram", "Design"],
       },
       {
-        name: "Marcus Williams",
-        role: "Communications Officer",
-        image:
-          "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=300&h=300&fit=crop&crop=face&auto=format",
+        name: "Put name here",
+        role: "Marketing Officer",
+        image: "",
         specialties: ["Email Marketing", "Events", "Outreach"],
       },
     ],
     business: [
       {
-        name: "Amanda Foster",
+        name: "Put name here",
         role: "Finance Officer",
-        image:
-          "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&h=300&fit=crop&crop=face&auto=format",
+        image: "",
         specialties: ["Budget Management", "Funding", "Analytics"],
       },
       {
-        name: "Carlos Mendez",
+        name: "Put name here",
         role: "Industry Officer",
-        image:
-          "https://images.unsplash.com/photo-1507591064344-4c6ce005b128?w=300&h=300&fit=crop&crop=face&auto=format",
+        image: "",
         specialties: ["Partnerships", "Recruiting", "Networking"],
       },
     ],
   };
 
+  // Flexible impact stats - easy to add/remove
   const impactStats = [
     { number: "500+", label: "Students Reached", icon: Users },
     { number: "24", label: "Workshops Hosted", icon: Code },
     { number: "12", label: "Industry Partners", icon: Briefcase },
-    { number: "8", label: "Technologies Taught", icon: Laptop },
   ];
 
   const faqData = [
@@ -163,7 +172,32 @@ export default function About() {
     Technical: Laptop,
     Marketing: Megaphone,
     Business: Briefcase,
+    Administrative: Settings,
   };
+
+  const whatWeDoItems = [
+    {
+      title: "Technical Workshops",
+      description:
+        "Interactive coding sessions covering web development, AI/ML, mobile apps, and cloud computing",
+      icon: Laptop,
+      color: "from-blue-500/20 to-blue-600/20",
+    },
+    {
+      title: "Industry Events",
+      description:
+        "Tech talks, networking sessions, and career panels with industry professionals",
+      icon: Calendar,
+      color: "from-green-500/20 to-green-600/20",
+    },
+    {
+      title: "Community Building",
+      description:
+        "Creating connections between students, fostering collaboration and knowledge sharing",
+      icon: Users,
+      color: "from-yellow-500/20 to-yellow-600/20",
+    },
+  ];
 
   return (
     <div className="relative min-h-screen overflow-hidden">
@@ -185,41 +219,6 @@ export default function About() {
             animation: "gradientShift 25s ease infinite",
           }}
         />
-      </div>
-
-      {/* GDSC Letters */}
-      <div className="pointer-events-none fixed inset-0 z-0 flex items-center justify-center overflow-hidden">
-        <div
-          className={`text-[12rem] font-extrabold transition-all duration-2000 select-none sm:text-[16rem] md:text-[20rem] lg:text-[25rem] ${
-            isLoaded ? "scale-100 opacity-30" : "scale-95 opacity-0"
-          }`}
-          style={{
-            textShadow: "0 0 50px rgba(255, 255, 255, 0.1)",
-            filter: "drop-shadow(0 0 20px rgba(255, 255, 255, 0.1))",
-          }}
-        >
-          {["G", "D", "S", "C"].map((letter, index) => {
-            const colors = [
-              "text-gdscred",
-              "text-gdscgreen",
-              "text-gdscblue",
-              "text-gdscyellow",
-            ];
-            return (
-              <span
-                key={letter}
-                className={`${colors[index]} animate-pulse`}
-                style={{
-                  animationDelay: `${index * 0.5}s`,
-                  animationDuration: "3s",
-                }}
-              >
-                {letter}
-              </span>
-            );
-          })}
-        </div>
-        <div className="absolute inset-0 opacity-60 backdrop-blur-lg"></div>
       </div>
 
       <NavBar />
@@ -252,45 +251,28 @@ export default function About() {
         {/* WHO WE ARE SECTION */}
         <AnimatedSection delay={600} id="who-we-are" className="py-20">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            <GlassContainer
-              gradientOverlay={false}
-              hoverEffect={false}
-              padding="lg"
-              className="mb-12"
-            >
-              <div className="text-center">
-                <h2 className="mb-6 text-3xl font-bold text-white sm:text-4xl">
-                  <Heart className="mr-3 inline-block h-8 w-8 text-red-400" />
-                  Who We Are
-                </h2>
-              </div>
-            </GlassContainer>
+            <SectionHeader
+              title="Who We Are"
+              subtitle="Empowering the next generation of tech leaders"
+              icon={Heart}
+              iconColor="text-red-400"
+            />
 
-            <div className="mx-auto grid max-w-5xl grid-cols-1 gap-8 md:grid-cols-2">
+            <div className="mx-auto max-w-4xl">
               <GlassContainer className="transition-all duration-700 hover:scale-105">
                 <div className="p-8 text-center">
-                  <Target className="mx-auto mb-4 h-12 w-12 text-blue-400" />
+                  <Target className="mx-auto mb-6 h-16 w-16 text-blue-400" />
                   <h3 className="mb-4 text-2xl font-bold text-white">
                     Our Mission
                   </h3>
-                  <p className="leading-relaxed text-white/80">
+                  <p className="text-lg leading-relaxed text-white/80">
+                    {/* This paragraph is AI generated. Someone please make it better */}
                     To empower UTD students with hands-on technology education,
                     foster innovation, and build a strong community of future
-                    tech leaders through engaging workshops and events.
-                  </p>
-                </div>
-              </GlassContainer>
-
-              <GlassContainer className="transition-all duration-700 hover:scale-105">
-                <div className="p-8 text-center">
-                  <Eye className="mx-auto mb-4 h-12 w-12 text-green-400" />
-                  <h3 className="mb-4 text-2xl font-bold text-white">
-                    Our Vision
-                  </h3>
-                  <p className="leading-relaxed text-white/80">
-                    To be the premier student organization at UTD that bridges
-                    the gap between academic learning and real-world technology
-                    applications, creating confident developers.
+                    tech leaders. We bridge the gap between academic learning
+                    and real-world technology applications through engaging
+                    workshops, industry events, and collaborative projects that
+                    create confident developers ready to shape the future.
                   </p>
                 </div>
               </GlassContainer>
@@ -301,47 +283,15 @@ export default function About() {
         {/* WHAT WE DO SECTION */}
         <AnimatedSection delay={800} id="what-we-do" className="py-20">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            <GlassContainer
-              gradientOverlay={false}
-              hoverEffect={false}
-              padding="lg"
-              className="mb-12"
-            >
-              <div className="text-center">
-                <h2 className="mb-4 text-3xl font-bold text-white sm:text-4xl">
-                  <Code className="mr-3 inline-block h-8 w-8 text-blue-400" />
-                  What We Do
-                </h2>
-                <p className="text-xl text-white/70">
-                  Hands-on learning experiences for the UTD community
-                </p>
-              </div>
-            </GlassContainer>
+            <SectionHeader
+              title="What We Do"
+              subtitle="Hands-on learning experiences for the UTD community"
+              icon={Code}
+              iconColor="text-blue-400"
+            />
 
             <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-              {[
-                {
-                  title: "Technical Workshops",
-                  description:
-                    "Interactive coding sessions covering web development, AI/ML, mobile apps, and cloud computing",
-                  icon: Laptop,
-                  color: "from-blue-500/20 to-blue-600/20",
-                },
-                {
-                  title: "Industry Events",
-                  description:
-                    "Tech talks, networking sessions, and career panels with industry professionals",
-                  icon: Calendar,
-                  color: "from-green-500/20 to-green-600/20",
-                },
-                {
-                  title: "Community Building",
-                  description:
-                    "Creating connections between students, fostering collaboration and knowledge sharing",
-                  icon: Users,
-                  color: "from-yellow-500/20 to-yellow-600/20",
-                },
-              ].map((item, index) => (
+              {whatWeDoItems.map((item, index) => (
                 <AnimatedSection
                   key={item.title}
                   delay={1000 + index * 200}
@@ -365,95 +315,45 @@ export default function About() {
           </div>
         </AnimatedSection>
 
-        {/* OUR IMPACT SECTION */}
+        {/* OUR IMPACT SECTION - Responsive Grid */}
         <AnimatedSection delay={1400} id="our-impact" className="py-20">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            <GlassContainer
-              gradientOverlay={false}
-              hoverEffect={false}
-              padding="lg"
-              className="mb-12"
-            >
-              <div className="text-center">
-                <h2 className="mb-4 text-3xl font-bold text-white sm:text-4xl">
-                  <TrendingUp className="mr-3 inline-block h-8 w-8 text-green-400" />
-                  Our Impact
-                </h2>
-                <p className="text-xl text-white/70">
-                  Making a difference in the UTD tech community
-                </p>
-              </div>
-            </GlassContainer>
+            <SectionHeader
+              title="Our Impact"
+              subtitle="Making a difference in the UTD tech community"
+              icon={TrendingUp}
+              iconColor="text-green-400"
+            />
 
-            <div className="grid grid-cols-2 gap-6 md:grid-cols-4">
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
               {impactStats.map((stat, index) => (
-                <AnimatedSection
+                <ImpactStat
                   key={stat.label}
+                  number={stat.number}
+                  label={stat.label}
+                  icon={stat.icon}
                   delay={1600 + index * 100}
-                  className="transition-all duration-700 hover:scale-105"
-                >
-                  <GlassContainer>
-                    <div className="p-6 text-center">
-                      <stat.icon className="mx-auto mb-3 h-8 w-8 text-white/70" />
-                      <div className="mb-2 text-3xl font-bold text-white">
-                        {stat.number}
-                      </div>
-                      <div className="text-sm text-white/80">{stat.label}</div>
-                    </div>
-                  </GlassContainer>
-                </AnimatedSection>
+                />
               ))}
             </div>
           </div>
         </AnimatedSection>
 
-        {/* LEADERSHIP TEAM - PRESIDENT & DIRECTORS */}
+        {/* LEADERSHIP TEAM */}
         <AnimatedSection delay={1800} id="leadership" className="py-20">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            <GlassContainer
-              gradientOverlay={false}
-              hoverEffect={false}
-              padding="lg"
-              className="mb-12"
-            >
-              <div className="text-center">
-                <h2 className="mb-4 text-3xl font-bold text-white sm:text-4xl">
-                  <Star className="mr-3 inline-block h-8 w-8 text-yellow-400" />
-                  Leadership Team
-                </h2>
-                <p className="text-xl text-white/70">
-                  Meet the directors driving our mission forward
-                </p>
-              </div>
-            </GlassContainer>
+            <SectionHeader
+              title="Leadership Team"
+              subtitle="Meet the directors driving our mission forward"
+              icon={Star}
+              iconColor="text-yellow-400"
+            />
 
             {/* President */}
             <div className="mb-12">
-              <GlassContainer className="mx-auto max-w-md transition-all duration-700 hover:scale-105">
-                <div className="p-8 text-center">
-                  <div className="relative mb-6">
-                    <img
-                      src={leadership.president.image}
-                      alt={leadership.president.name}
-                      className="mx-auto h-32 w-32 rounded-full border-4 border-white/20 object-cover"
-                    />
-                    <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 transform">
-                      <div className="rounded-full bg-yellow-500 px-3 py-1 text-sm font-bold text-black">
-                        President
-                      </div>
-                    </div>
-                  </div>
-                  <h3 className="mb-2 text-2xl font-bold text-white">
-                    {leadership.president.name}
-                  </h3>
-                  <p className="mb-1 text-white/70">
-                    {leadership.president.major}
-                  </p>
-                  <p className="text-sm text-white/60">
-                    {leadership.president.year}
-                  </p>
-                </div>
-              </GlassContainer>
+              <AnimatedSection delay={1900} className="mx-auto max-w-md">
+                <PersonCard {...leadership.president} isPresident={true} />
+              </AnimatedSection>
             </div>
 
             {/* Group Photo */}
@@ -469,11 +369,10 @@ export default function About() {
                     </h3>
                     <div className="relative">
                       <img
-                        src="/images/Directors.png"
+                        src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=800&h=500&fit=crop&auto=format"
                         alt="GDSC UTD Leadership Team"
                         className="h-64 w-full rounded-2xl object-cover sm:h-80 md:h-96"
                       />
-                      {/* Glass overlay on the image for consistency */}
                       <div
                         className="absolute inset-0 rounded-2xl"
                         style={{
@@ -490,8 +389,8 @@ export default function About() {
               </AnimatedSection>
             </div>
 
-            {/* Directors */}
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+            {/* Directors - Updated to accommodate 5 directors */}
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
               {leadership.directors.map((director, index) => {
                 const CommitteeIcon =
                   committeeIcons[
@@ -501,32 +400,8 @@ export default function About() {
                   <AnimatedSection
                     key={director.name}
                     delay={2200 + index * 200}
-                    className="transition-all duration-700 hover:scale-105"
                   >
-                    <GlassContainer>
-                      <div className="p-6 text-center">
-                        <div className="relative mb-4">
-                          <img
-                            src={director.image}
-                            alt={director.name}
-                            className="mx-auto h-24 w-24 rounded-full border-2 border-white/20 object-cover"
-                          />
-                          <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 transform">
-                            <CommitteeIcon className="h-6 w-6 rounded-full bg-blue-500 p-1 text-white" />
-                          </div>
-                        </div>
-                        <h3 className="mb-1 text-lg font-bold text-white">
-                          {director.name}
-                        </h3>
-                        <p className="mb-2 text-sm font-medium text-blue-300">
-                          {director.role}
-                        </p>
-                        <p className="mb-1 text-sm text-white/70">
-                          {director.major}
-                        </p>
-                        <p className="text-xs text-white/60">{director.year}</p>
-                      </div>
-                    </GlassContainer>
+                    <PersonCard {...director} CommitteeIcon={CommitteeIcon} />
                   </AnimatedSection>
                 );
               })}
@@ -537,22 +412,12 @@ export default function About() {
         {/* OFFICERS SECTION */}
         <AnimatedSection delay={2400} id="officers" className="py-20">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            <GlassContainer
-              gradientOverlay={false}
-              hoverEffect={false}
-              padding="lg"
-              className="mb-12"
-            >
-              <div className="text-center">
-                <h2 className="mb-4 text-3xl font-bold text-white sm:text-4xl">
-                  <Users className="mr-3 inline-block h-8 w-8 text-blue-400" />
-                  Our Officers
-                </h2>
-                <p className="text-xl text-white/70">
-                  The dedicated team members making it all happen
-                </p>
-              </div>
-            </GlassContainer>
+            <SectionHeader
+              title="Our Officers"
+              subtitle="The dedicated team members making it all happen"
+              icon={Users}
+              iconColor="text-blue-400"
+            />
 
             {Object.entries(officers).map(
               ([committee, members], committeeIndex) => (
@@ -580,7 +445,6 @@ export default function About() {
                       <AnimatedSection
                         key={officer.name}
                         delay={2600 + committeeIndex * 400 + index * 200}
-                        className="transition-all duration-700 hover:scale-105"
                       >
                         <GlassContainer>
                           <div className="p-6">
@@ -647,19 +511,11 @@ export default function About() {
         {/* FAQ SECTION */}
         <AnimatedSection delay={3200} id="faq" className="py-20">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            <GlassContainer
-              gradientOverlay={false}
-              hoverEffect={false}
-              padding="lg"
-              className="mb-12"
-            >
-              <div className="text-center">
-                <h2 className="mb-4 text-3xl font-bold text-white sm:text-4xl">
-                  <HelpCircle className="mr-3 inline-block h-8 w-8 text-purple-400" />
-                  Frequently Asked Questions
-                </h2>
-              </div>
-            </GlassContainer>
+            <SectionHeader
+              title="Frequently Asked Questions"
+              icon={HelpCircle}
+              iconColor="text-purple-400"
+            />
 
             <div className="mx-auto max-w-4xl space-y-4">
               {faqData.map((faq, index) => (
