@@ -85,6 +85,41 @@ export default function Events() {
         />
       </div>
 
+      {/* GDSC Letters */}
+      <div className="pointer-events-none fixed inset-0 z-0 flex items-center justify-center overflow-hidden">
+        <div
+          className={`text-[12rem] font-extrabold transition-all duration-2000 select-none sm:text-[16rem] md:text-[20rem] lg:text-[25rem] ${
+            isLoaded ? "scale-100 opacity-30" : "scale-95 opacity-0"
+          }`}
+          style={{
+            textShadow: "0 0 50px rgba(255, 255, 255, 0.1)",
+            filter: "drop-shadow(0 0 20px rgba(255, 255, 255, 0.1))",
+          }}
+        >
+          {["G", "D", "S", "C"].map((letter, index) => {
+            const colors = [
+              "text-gdscred",
+              "text-gdscgreen",
+              "text-gdscblue",
+              "text-gdscyellow",
+            ];
+            return (
+              <span
+                key={letter}
+                className={`${colors[index]} animate-pulse`}
+                style={{
+                  animationDelay: `${index * 0.5}s`,
+                  animationDuration: "3s",
+                }}
+              >
+                {letter}
+              </span>
+            );
+          })}
+        </div>
+        <div className="absolute inset-0 opacity-60 backdrop-blur-lg"></div>
+      </div>
+
       <Navbar />
 
       <main className="px-4 pt-24 pb-12 sm:px-6 lg:px-8">
