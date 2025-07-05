@@ -1,22 +1,33 @@
+// components/ui/EventCard.tsx (Updated)
 import { Calendar, Clock, MapPin } from "lucide-react";
+import { useNavigate } from "react-router";
 
 interface EventCardProps {
+  eventId: string;
   eventName: string;
   eventDescription: string;
   eventStatus: "upcoming" | "ongoing" | "past";
   eventDate: string;
   eventTime: string;
   eventLocation: string;
+  imageUrl?: string;
+  rsvpCount?: number;
+  maxCapacity?: number;
 }
 
 export default function EventCard({
+  eventId,
   eventName,
   eventDescription,
   eventStatus,
   eventDate,
   eventTime,
   eventLocation,
+  imageUrl,
+  rsvpCount = 0,
 }: EventCardProps) {
+  const navigate = useNavigate();
+
   // Define status colors
   const getStatusColor = (status: "upcoming" | "ongoing" | "past") => {
     switch (status.toLowerCase()) {
@@ -31,8 +42,26 @@ export default function EventCard({
     }
   };
 
+  const handleCardClick = () => {
+    navigate(`/workshop/${eventId}`);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      handleCardClick();
+    }
+  };
+
   return (
-    <div className="group relative w-full max-w-sm cursor-pointer overflow-hidden rounded-3xl transition-all duration-300 hover:scale-105 hover:shadow-2xl">
+    <div
+      className="group relative w-full max-w-sm cursor-pointer overflow-hidden rounded-3xl transition-all duration-300 hover:scale-105 hover:shadow-2xl focus:ring-2 focus:ring-white/50 focus:outline-none"
+      onClick={handleCardClick}
+      onKeyDown={handleKeyDown}
+      tabIndex={0}
+      role="button"
+      aria-label={`View details for ${eventName}`}
+    >
       {/* Liquid Glass Base */}
       <div
         className="absolute inset-0 rounded-3xl border border-white/10 backdrop-blur-md"
@@ -79,9 +108,13 @@ export default function EventCard({
         {/* Banner Image */}
         <div className="relative -m-6 mb-4 h-32 overflow-hidden rounded-t-3xl">
           <img
-            src="https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400&h=200&fit=crop&crop=entropy&auto=format"
-            alt="Event banner"
+            src={
+              imageUrl ||
+              "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400&h=200&fit=crop&crop=entropy&auto=format"
+            }
+            alt={`${eventName} banner`}
             className="h-full w-full object-cover"
+            loading="lazy"
           />
           {/* Glass overlay on image */}
           <div
@@ -95,12 +128,12 @@ export default function EventCard({
 
         <div className="px-6 pb-6">
           {/* Event Name */}
-          <h3 className="mb-3 text-xl font-bold text-white drop-shadow-lg">
+          <h3 className="mb-3 line-clamp-2 text-xl font-bold text-white drop-shadow-lg">
             {eventName}
           </h3>
 
           {/* Event Description */}
-          <p className="mb-6 text-sm leading-relaxed text-white/50">
+          <p className="mb-6 line-clamp-3 text-sm leading-relaxed text-white/50">
             {eventDescription}
           </p>
 
@@ -122,8 +155,8 @@ export default function EventCard({
                 className="flex items-center gap-1 rounded-lg border border-white/20 px-2 py-1 shadow-sm backdrop-blur-sm"
                 style={{ background: "rgba(255, 255, 255, 0.12)" }}
               >
-                <MapPin size={14} className="text-white/80" />
-                <span className="text-xs font-medium text-white/80">
+                <MapPin size={14} className="flex-shrink-0 text-white/80" />
+                <span className="truncate text-xs font-medium text-white/80">
                   {eventLocation}
                 </span>
               </div>
@@ -135,7 +168,7 @@ export default function EventCard({
                 className="flex items-center gap-1 rounded-lg border border-white/20 px-2 py-1 shadow-sm backdrop-blur-sm"
                 style={{ background: "rgba(255, 255, 255, 0.12)" }}
               >
-                <Calendar size={14} className="text-white/80" />
+                <Calendar size={14} className="flex-shrink-0 text-white/80" />
                 <span className="text-xs font-medium text-white/80">
                   {eventDate}
                 </span>
@@ -144,13 +177,23 @@ export default function EventCard({
                 className="flex items-center gap-1 rounded-lg border border-white/20 px-2 py-1 shadow-sm backdrop-blur-sm"
                 style={{ background: "rgba(255, 255, 255, 0.12)" }}
               >
-                <Clock size={14} className="text-white/80" />
+                <Clock size={14} className="flex-shrink-0 text-white/80" />
                 <span className="text-xs font-medium text-white/80">
                   {eventTime}
                 </span>
               </div>
             </div>
           </div>
+
+          {/* RSVP Count for upcoming events */}
+          {eventStatus === "upcoming" && (
+            <div className="mt-4 border-t border-white/10 pt-3">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-white/60">RSVPs</span>
+                <span className="font-medium text-white/80">{rsvpCount}</span>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
