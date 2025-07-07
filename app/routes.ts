@@ -6,5 +6,5 @@ export default [
   route("about", "routes/about-us.tsx"),
   route("workshop/:workshopId", "routes/workshop-details.tsx"),
   route("dashboard", "routes/dashboard.tsx"),
-  route("dashboard/create-event", "routes/create-event.tsx"),
+  route("dashboard/create-event/:eventId?", "routes/create-event.tsx"),
 ] satisfies RouteConfig;

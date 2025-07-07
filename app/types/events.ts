@@ -102,8 +102,6 @@ export interface PaginationParams {
   limit?: number;
 }
 
-// types/events.ts - Add these types to your existing events.ts types file
-
 export interface CreateEventData {
   name: string;
   description?: string;
@@ -114,6 +112,7 @@ export interface CreateEventData {
   end_time?: string; // HH:MM format
   max_capacity: number;
   event_type: string;
+  status?: EventStatus; // Added for editing mode
   allow_anonymous_rsvp: boolean;
   rsvp_limit_per_ip: number;
   hosts?: EventHost[];
@@ -157,6 +156,7 @@ export interface EventFormData {
   end_time: string;
   max_capacity: string; // String for form handling, converted to number
   event_type: string;
+  status: string; // Added for editing mode
 
   // RSVP settings
   allow_anonymous_rsvp: boolean;

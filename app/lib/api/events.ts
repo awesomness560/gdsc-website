@@ -234,6 +234,7 @@ export async function createEvent(eventData: CreateEventData) {
     end_time,
     max_capacity,
     event_type,
+    status,
     allow_anonymous_rsvp,
     rsvp_limit_per_ip,
     hosts,
@@ -253,9 +254,9 @@ export async function createEvent(eventData: CreateEventData) {
       end_time,
       max_capacity,
       event_type,
+      status: status || "upcoming", // Default status for new events
       allow_anonymous_rsvp,
       rsvp_limit_per_ip,
-      status: "upcoming", // Default status for new events
     })
     .select()
     .single();
@@ -342,6 +343,7 @@ export async function updateEvent(
     event_type,
     allow_anonymous_rsvp,
     rsvp_limit_per_ip,
+    status,
   } = eventData;
 
   const { data, error } = await supabase

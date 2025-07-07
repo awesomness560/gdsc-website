@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, useParams } from "react-router";
 import {
   Calendar,
   Clock,
@@ -19,18 +19,25 @@ import {
   CheckCircle,
   ExternalLink,
   UserPlus,
+  Edit,
 } from "lucide-react";
 import Navbar from "~/components/ui/NavBar";
 import GlassContainer from "~/components/ui/GlassContainer";
 import AnimatedSection from "~/components/ui/AnimatedSection";
 import { Button } from "~/components/ui/button";
 import { useAuth } from "~/hooks/useAuth";
-import { useCreateEvent, usePeople } from "~/hooks/useCreateEvent";
+import {
+  useCreateEvent,
+  useUpdateEvent,
+  usePeople,
+} from "~/hooks/useCreateEvent";
+import { useEventDetails } from "~/hooks/useEvents";
 import type {
   EventFormData,
   CreateEventData,
   EventHost,
   CreateEventLink,
+  EventStatus,
 } from "~/types/events";
 
 const LINK_TYPES = [
@@ -49,16 +56,39 @@ const LINK_TYPES = [
   },
 ];
 
+const EVENT_STATUSES = [
+  {
+    value: "upcoming",
+    label: "Upcoming",
+    description: "Event hasn't started yet",
+  },
+  {
+    value: "ongoing",
+    label: "Ongoing",
+    description: "Event is currently happening",
+  },
+  { value: "past", label: "Past", description: "Event has finished" },
+];
+
 export default function CreateEvent() {
   const navigate = useNavigate();
+  const { eventId } = useParams<{ eventId?: string }>();
+  const isEditing = !!eventId;
+
   const [isLoaded, setIsLoaded] = useState(false);
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const [activeSection, setActiveSection] = useState<string>("basic");
   const [showHostDropdown, setShowHostDropdown] = useState(false);
 
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const { data: people, isLoading: peopleLoading } = usePeople();
+  const { data: eventDetails, isLoading: eventLoading } = useEventDetails(
+    eventId || "",
+    { enabled: isEditing },
+  );
+
   const createEventMutation = useCreateEvent();
+  const updateEventMutation = useUpdateEvent();
 
   // Form state
   const [formData, setFormData] = useState<EventFormData>({
@@ -71,6 +101,7 @@ export default function CreateEvent() {
     end_time: "",
     max_capacity: "50",
     event_type: "workshop", // Fixed to workshop only
+    status: "upcoming",
     allow_anonymous_rsvp: true,
     rsvp_limit_per_ip: "1",
     hosts: [],
@@ -83,12 +114,38 @@ export default function CreateEvent() {
     setTimeout(() => setIsLoaded(true), 100);
   }, []);
 
+  // Populate form with existing event data when editing
+  useEffect(() => {
+    if (isEditing && eventDetails && !eventLoading) {
+      setFormData({
+        name: eventDetails.name || "",
+        description: eventDetails.description || "",
+        image_url: eventDetails.image_url || "",
+        location: eventDetails.location || "",
+        date: eventDetails.date || "",
+        start_time: eventDetails.start_time || "",
+        end_time: eventDetails.end_time || "",
+        max_capacity: eventDetails.max_capacity?.toString() || "50",
+        event_type: eventDetails.event_type || "workshop",
+        status: eventDetails.status || "upcoming",
+        allow_anonymous_rsvp: eventDetails.allow_anonymous_rsvp ?? true,
+        rsvp_limit_per_ip: eventDetails.rsvp_limit_per_ip?.toString() || "1",
+        hosts:
+          eventDetails.hosts?.map((host) => ({
+            person_id: host.person_id,
+            host_role: host.host_role || "Host",
+          })) || [],
+        links: [], // Will be populated separately if needed
+      });
+    }
+  }, [isEditing, eventDetails, eventLoading]);
+
   // Redirect if not authenticated
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      navigate("/admin");
+    if (!authLoading && !isAuthenticated) {
+      navigate("/dashboard");
     }
-  }, [isLoading, isAuthenticated, navigate]);
+  }, [authLoading, isAuthenticated, navigate]);
 
   const handleInputChange = (field: keyof EventFormData, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -169,11 +226,6 @@ export default function CreateEvent() {
     if (!formData.date) newErrors.date = "Date is required";
     if (!formData.start_time) newErrors.start_time = "Start time is required";
 
-    const capacity = parseInt(formData.max_capacity);
-    if (isNaN(capacity) || capacity < 1) {
-      newErrors.max_capacity = "Capacity must be a positive number";
-    }
-
     const rsvpLimit = parseInt(formData.rsvp_limit_per_ip);
     if (isNaN(rsvpLimit) || rsvpLimit < 1) {
       newErrors.rsvp_limit_per_ip = "RSVP limit must be a positive number";
@@ -216,7 +268,7 @@ export default function CreateEvent() {
       return;
     }
 
-    const createEventData: CreateEventData = {
+    const eventData: CreateEventData = {
       name: formData.name,
       description: formData.description || undefined,
       image_url: formData.image_url || undefined,
@@ -226,6 +278,7 @@ export default function CreateEvent() {
       end_time: formData.end_time || undefined,
       max_capacity: parseInt(formData.max_capacity),
       event_type: formData.event_type,
+      status: formData.status as EventStatus,
       allow_anonymous_rsvp: formData.allow_anonymous_rsvp,
       rsvp_limit_per_ip: parseInt(formData.rsvp_limit_per_ip),
       hosts: formData.hosts.length > 0 ? formData.hosts : undefined,
@@ -233,7 +286,12 @@ export default function CreateEvent() {
     };
 
     try {
-      await createEventMutation.mutateAsync(createEventData);
+      if (isEditing && eventId) {
+        await updateEventMutation.mutateAsync({ eventId, eventData });
+      } else {
+        await createEventMutation.mutateAsync(eventData);
+      }
+
       setShowSuccessMessage(true);
 
       // Redirect after showing success message
@@ -241,7 +299,10 @@ export default function CreateEvent() {
         navigate("/dashboard");
       }, 2000);
     } catch (error) {
-      console.error("Failed to create event:", error);
+      console.error(
+        `Failed to ${isEditing ? "update" : "create"} event:`,
+        error,
+      );
     }
   };
 
@@ -258,6 +319,10 @@ export default function CreateEvent() {
       return { ...host, person };
     });
   };
+
+  const isLoading = authLoading || (isEditing && eventLoading);
+  const isMutating =
+    createEventMutation.isPending || updateEventMutation.isPending;
 
   // Loading state
   if (isLoading) {
@@ -277,8 +342,14 @@ export default function CreateEvent() {
           <div className="mx-auto max-w-7xl">
             <GlassContainer padding="xl" className="text-center">
               <Loader2 className="mx-auto mb-4 h-12 w-12 animate-spin text-white/60" />
-              <h2 className="mb-2 text-2xl font-bold text-white">Loading...</h2>
-              <p className="text-white/70">Checking authentication...</p>
+              <h2 className="mb-2 text-2xl font-bold text-white">
+                {isEditing ? "Loading Event..." : "Loading..."}
+              </h2>
+              <p className="text-white/70">
+                {isEditing
+                  ? "Fetching event details..."
+                  : "Checking authentication..."}
+              </p>
             </GlassContainer>
           </div>
         </main>
@@ -316,7 +387,7 @@ export default function CreateEvent() {
           <AnimatedSection delay={200}>
             <div className="mb-8">
               <button
-                onClick={() => navigate("/admin")}
+                onClick={() => navigate("/dashboard")}
                 className="group mb-4 flex items-center text-white/70 transition-colors hover:text-white"
               >
                 <ArrowLeft className="mr-2 h-4 w-4 transition-transform group-hover:-translate-x-1" />
@@ -327,11 +398,17 @@ export default function CreateEvent() {
                 <div
                   className="rounded-xl border border-white/20 p-3 backdrop-blur-sm"
                   style={{
-                    background: "rgba(59, 130, 246, 0.2)",
+                    background: isEditing
+                      ? "rgba(234, 179, 8, 0.2)"
+                      : "rgba(59, 130, 246, 0.2)",
                     boxShadow: "inset 0 1px 0 rgba(255, 255, 255, 0.2)",
                   }}
                 >
-                  <Plus className="h-6 w-6 text-blue-300" />
+                  {isEditing ? (
+                    <Edit className="h-6 w-6 text-yellow-300" />
+                  ) : (
+                    <Plus className="h-6 w-6 text-blue-300" />
+                  )}
                 </div>
                 <div>
                   <h1
@@ -344,10 +421,12 @@ export default function CreateEvent() {
                       backgroundClip: "text",
                     }}
                   >
-                    Create New Workshop
+                    {isEditing ? "Edit Workshop" : "Create New Workshop"}
                   </h1>
                   <p className="text-white/70">
-                    Set up a new workshop for GDSC UTD members
+                    {isEditing
+                      ? "Update workshop details and settings"
+                      : "Set up a new workshop for GDSC UTD members"}
                   </p>
                 </div>
               </div>
@@ -361,7 +440,7 @@ export default function CreateEvent() {
                 <div className="p-6 text-center">
                   <CheckCircle className="mx-auto mb-4 h-12 w-12 text-green-400" />
                   <h3 className="mb-2 text-xl font-semibold text-white">
-                    Workshop Created Successfully!
+                    Workshop {isEditing ? "Updated" : "Created"} Successfully!
                   </h3>
                   <p className="text-white/70">
                     Redirecting you back to the dashboard...
@@ -473,30 +552,37 @@ export default function CreateEvent() {
                         )}
                       </div>
 
-                      <div>
-                        <label className="mb-2 block text-sm font-medium text-white">
-                          Max Capacity *
-                        </label>
-                        <input
-                          type="number"
-                          value={formData.max_capacity}
-                          onChange={(e) =>
-                            handleInputChange("max_capacity", e.target.value)
-                          }
-                          min="1"
-                          placeholder="50"
-                          className={`w-full rounded-lg border px-4 py-3 text-white transition-colors ${
-                            errors.max_capacity
-                              ? "border-red-400/50 bg-red-500/10"
-                              : "border-white/20 bg-white/5 hover:border-white/30 focus:border-blue-400/50"
-                          } placeholder-white/50 backdrop-blur-sm focus:ring-0 focus:outline-none`}
-                        />
-                        {errors.max_capacity && (
-                          <p className="mt-1 text-sm text-red-400">
-                            {errors.max_capacity}
+                      {isEditing && (
+                        <div>
+                          <label className="mb-2 block text-sm font-medium text-white">
+                            Status *
+                          </label>
+                          <select
+                            value={formData.status}
+                            onChange={(e) =>
+                              handleInputChange("status", e.target.value)
+                            }
+                            className="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-white backdrop-blur-sm transition-colors hover:border-white/30 focus:border-blue-400/50 focus:ring-0 focus:outline-none"
+                          >
+                            {EVENT_STATUSES.map((status) => (
+                              <option
+                                key={status.value}
+                                value={status.value}
+                                className="bg-gray-800"
+                              >
+                                {status.label}
+                              </option>
+                            ))}
+                          </select>
+                          <p className="mt-1 text-sm text-white/60">
+                            {
+                              EVENT_STATUSES.find(
+                                (s) => s.value === formData.status,
+                              )?.description
+                            }
                           </p>
-                        )}
-                      </div>
+                        </div>
+                      )}
 
                       <div>
                         <label className="mb-2 block text-sm font-medium text-white">
@@ -1003,7 +1089,7 @@ export default function CreateEvent() {
                 <div className="mt-8 flex items-center justify-between border-t border-white/10 pt-6">
                   <Button
                     type="button"
-                    onClick={() => navigate("/admin")}
+                    onClick={() => navigate("/dashboard")}
                     variant="outline"
                     className="border-white/20 bg-white/5 text-white hover:bg-white/10"
                   >
@@ -1029,57 +1115,75 @@ export default function CreateEvent() {
                       </Button>
                     )}
 
-                    {activeSection !== "links" ? (
+                                        {activeSection !== "basic" && (
                       <Button
                         type="button"
                         onClick={() => {
-                          const currentIndex = sections.findIndex(
-                            (s) => s.id === activeSection,
-                          );
-                          if (currentIndex < sections.length - 1) {
-                            setActiveSection(sections[currentIndex + 1].id);
+                          const currentIndex = sections.findIndex(s => s.id === activeSection);
+                          if (currentIndex > 0) {
+                            setActiveSection(sections[currentIndex - 1].id);
                           }
                         }}
-                        className="group relative"
+                        variant="outline"
+                        className="border-white/20 bg-white/5 text-white hover:bg-white/10"
                       >
-                        <div
-                          className="absolute inset-0 rounded-lg border border-white/30 backdrop-blur-sm transition-all duration-300 group-hover:scale-105 group-hover:border-white/50"
-                          style={{
-                            background: "rgba(59, 130, 246, 0.3)",
-                            boxShadow: "0 4px 16px rgba(59, 130, 246, 0.2)",
-                          }}
-                        />
-                        <span className="relative z-10 bg-transparent font-medium text-white transition-all duration-300 group-hover:scale-105 hover:bg-transparent">
-                          Next
-                        </span>
+                        Previous
                       </Button>
-                    ) : (
-                      <Button
-                        type="submit"
-                        disabled={createEventMutation.isPending}
-                        className="group relative"
-                      >
+                    )}
+
+                    {activeSection !== "links" ? (
+                      <div className="group relative">
                         <div
                           className="absolute inset-0 rounded-lg border border-white/30 backdrop-blur-sm transition-all duration-300 group-hover:scale-105 group-hover:border-white/50"
                           style={{
-                            background: "rgba(34, 197, 94, 0.3)",
-                            boxShadow: "0 4px 16px rgba(34, 197, 94, 0.2)",
+                            background: "linear-gradient(135deg, rgba(59, 130, 246, 0.4) 0%, rgba(99, 102, 241, 0.4) 100%)",
+                            boxShadow: "0 8px 24px rgba(59, 130, 246, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.3)",
                           }}
                         />
-                        <span className="relative z-10 flex items-center bg-transparent font-medium text-white transition-all duration-300 group-hover:scale-105 hover:bg-transparent">
-                          {createEventMutation.isPending ? (
+                        <Button
+                          type="button"
+                          onClick={() => {
+                            const currentIndex = sections.findIndex(s => s.id === activeSection);
+                            if (currentIndex < sections.length - 1) {
+                              setActiveSection(sections[currentIndex + 1].id);
+                            }
+                          }}
+                          className="relative z-10 bg-transparent font-semibold text-white transition-all duration-300 group-hover:scale-105 hover:bg-transparent"
+                        >
+                          Next
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="group relative">
+                        <div
+                          className="absolute inset-0 rounded-lg border border-white/30 backdrop-blur-sm transition-all duration-300 group-hover:scale-105 group-hover:border-white/50"
+                          style={{
+                            background: isEditing 
+                              ? "linear-gradient(135deg, rgba(234, 179, 8, 0.4) 0%, rgba(245, 158, 11, 0.4) 100%)"
+                              : "linear-gradient(135deg, rgba(34, 197, 94, 0.4) 0%, rgba(16, 185, 129, 0.4) 100%)",
+                            boxShadow: isEditing 
+                              ? "0 8px 24px rgba(234, 179, 8, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.3)"
+                              : "0 8px 24px rgba(34, 197, 94, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.3)",
+                          }}
+                        />
+                        <Button
+                          type="submit"
+                          disabled={isMutating}
+                          className="relative z-10 bg-transparent font-semibold text-white transition-all duration-300 group-hover:scale-105 hover:bg-transparent disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {isMutating ? (
                             <>
                               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Creating Workshop...
+                              {isEditing ? "Updating Workshop..." : "Creating Workshop..."}
                             </>
                           ) : (
                             <>
                               <Save className="mr-2 h-4 w-4" />
-                              Create Workshop
+                              {isEditing ? "Update Workshop" : "Create Workshop"}
                             </>
                           )}
-                        </span>
-                      </Button>
+                        </Button>
+                      </div>
                     )}
                   </div>
                 </div>

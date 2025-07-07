@@ -441,7 +441,12 @@ export default function AdminDashboard() {
                                     <button className="rounded-lg p-2 text-white/60 transition-colors hover:bg-white/10 hover:text-white">
                                       <Eye className="h-4 w-4" />
                                     </button>
-                                    <button className="rounded-lg p-2 text-white/60 transition-colors hover:bg-white/10 hover:text-white">
+                                    <button
+                                      className="rounded-lg p-2 text-white/60 transition-colors hover:bg-white/10 hover:text-white"
+                                      onClick={() =>
+                                        navigate(`/dashboard/create-event/${event.id}`)
+                                      }
+                                    >
                                       <Edit className="h-4 w-4" />
                                     </button>
                                     <button className="rounded-lg p-2 text-white/60 transition-colors hover:bg-red-500/10 hover:text-red-400">
