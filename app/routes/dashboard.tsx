@@ -13,6 +13,7 @@ import {
   Edit,
   Trash2,
   Eye,
+  Users2,
 } from "lucide-react";
 import Navbar from "~/components/ui/NavBar";
 import GlassContainer from "~/components/ui/GlassContainer";
@@ -307,11 +308,11 @@ export default function AdminDashboard() {
                         action: () => console.log("Manage events"), // TODO: Implement
                       },
                       {
-                        title: "View Analytics",
-                        description: "Check event performance and stats",
-                        icon: BarChart3,
+                        title: "Manage People",
+                        description: "Add, remove, and edit people",
+                        icon: Users2,
                         color: "from-purple-500/30 to-purple-600/30",
-                        action: () => console.log("View analytics"), // TODO: Implement
+                        action: () => navigate("/dashboard/people"), // TODO: Implement
                       },
                     ].map((action, index) => (
                       <button
@@ -444,7 +445,9 @@ export default function AdminDashboard() {
                                     <button
                                       className="rounded-lg p-2 text-white/60 transition-colors hover:bg-white/10 hover:text-white"
                                       onClick={() =>
-                                        navigate(`/dashboard/create-event/${event.id}`)
+                                        navigate(
+                                          `/dashboard/create-event/${event.id}`,
+                                        )
                                       }
                                     >
                                       <Edit className="h-4 w-4" />
