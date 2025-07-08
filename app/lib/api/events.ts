@@ -325,7 +325,7 @@ export async function getPeople() {
 }
 
 /**
- * Update an existing event
+ * Update an existing event with hosts and links
  */
 export async function updateEvent(
   eventId: string,
@@ -344,9 +344,12 @@ export async function updateEvent(
     allow_anonymous_rsvp,
     rsvp_limit_per_ip,
     status,
+    hosts,
+    links,
   } = eventData;
 
-  const { data, error } = await supabase
+  // Update the main event data
+  const { data: event, error: eventError } = await supabase
     .from("events")
     .update({
       name,
@@ -367,11 +370,75 @@ export async function updateEvent(
     .select()
     .single();
 
-  if (error) {
-    throw new Error(`Failed to update event: ${error.message}`);
+  if (eventError) {
+    throw new Error(`Failed to update event: ${eventError.message}`);
   }
 
-  return data;
+  // Update hosts if provided
+  if (hosts !== undefined) {
+    // First, delete existing hosts
+    const { error: deleteHostsError } = await supabase
+      .from("event_hosts")
+      .delete()
+      .eq("event_id", eventId);
+
+    if (deleteHostsError) {
+      console.error("Failed to delete existing hosts:", deleteHostsError);
+    }
+
+    // Then, insert new hosts if any
+    if (hosts.length > 0) {
+      const hostInserts = hosts.map((host) => ({
+        event_id: eventId,
+        person_id: host.person_id,
+        host_role: host.host_role || "Host",
+      }));
+
+      const { error: hostsError } = await supabase
+        .from("event_hosts")
+        .insert(hostInserts);
+
+      if (hostsError) {
+        console.error("Failed to add event hosts:", hostsError);
+      }
+    }
+  }
+
+  // Update links if provided
+  if (links !== undefined) {
+    // First, delete existing links
+    const { error: deleteLinksError } = await supabase
+      .from("event_links")
+      .delete()
+      .eq("event_id", eventId);
+
+    if (deleteLinksError) {
+      console.error("Failed to delete existing links:", deleteLinksError);
+    }
+
+    // Then, insert new links if any
+    if (links.length > 0) {
+      const linkInserts = links.map((link, index) => ({
+        event_id: eventId,
+        title: link.title,
+        description: link.description,
+        url: link.url,
+        link_type: link.link_type,
+        display_order: link.display_order || index,
+        show_for_status: link.show_for_status || ["upcoming", "ongoing"],
+      }));
+
+      const { error: linksError } = await supabase
+        .from("event_links")
+        .insert(linkInserts);
+
+      if (linksError) {
+        console.error("Failed to add event links:", linksError);
+      }
+    }
+  }
+
+  return event;
 }
 
 /**

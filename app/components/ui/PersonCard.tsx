@@ -1,4 +1,3 @@
-// ~/components/ui/PersonCard.tsx
 import GlassContainer from "~/components/ui/GlassContainer";
 import type { LucideIcon } from "lucide-react";
 

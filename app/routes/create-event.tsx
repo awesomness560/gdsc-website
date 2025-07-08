@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useParams } from "react-router";
 import {
   Calendar,
@@ -31,7 +31,7 @@ import {
   useUpdateEvent,
   usePeople,
 } from "~/hooks/useCreateEvent";
-import { useEventDetails } from "~/hooks/useEvents";
+import { useEventDetails, useEventLinks } from "~/hooks/useEvents";
 import type {
   EventFormData,
   CreateEventData,
@@ -75,22 +75,15 @@ export default function CreateEvent() {
   const { eventId } = useParams<{ eventId?: string }>();
   const isEditing = !!eventId;
 
+  // Component state
   const [isLoaded, setIsLoaded] = useState(false);
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const [activeSection, setActiveSection] = useState<string>("basic");
   const [showHostDropdown, setShowHostDropdown] = useState(false);
+  const [isFormInitialized, setIsFormInitialized] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
-  const { data: people, isLoading: peopleLoading } = usePeople();
-  const { data: eventDetails, isLoading: eventLoading } = useEventDetails(
-    eventId || "",
-    { enabled: isEditing },
-  );
-
-  const createEventMutation = useCreateEvent();
-  const updateEventMutation = useUpdateEvent();
-
-  // Form state
+  // Form data
   const [formData, setFormData] = useState<EventFormData>({
     name: "",
     description: "",
@@ -100,7 +93,7 @@ export default function CreateEvent() {
     start_time: "",
     end_time: "",
     max_capacity: "50",
-    event_type: "workshop", // Fixed to workshop only
+    event_type: "workshop",
     status: "upcoming",
     allow_anonymous_rsvp: true,
     rsvp_limit_per_ip: "1",
@@ -108,15 +101,50 @@ export default function CreateEvent() {
     links: [],
   });
 
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  // Hooks
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { data: people, isLoading: peopleLoading } = usePeople();
+  const { data: eventDetails, isLoading: eventLoading } = useEventDetails(
+    eventId || "",
+    { enabled: isEditing },
+  );
+  const { data: eventLinks, isLoading: linksLoading } = useEventLinks(
+    eventId || "",
+    eventDetails?.status || "upcoming",
+    { enabled: isEditing && !!eventDetails },
+  );
+  const createEventMutation = useCreateEvent();
+  const updateEventMutation = useUpdateEvent();
 
+  // Computed values
+  const sections = [
+    { id: "basic", label: "Basic Info", icon: Calendar },
+    { id: "details", label: "Details", icon: Settings },
+    { id: "hosts", label: "Hosts", icon: Users },
+    { id: "links", label: "Links", icon: LinkIcon },
+  ];
+
+  const isLoading =
+    authLoading || (isEditing && (eventLoading || linksLoading));
+  const isMutating =
+    createEventMutation.isPending || updateEventMutation.isPending;
+
+  // Effects
   useEffect(() => {
     setTimeout(() => setIsLoaded(true), 100);
   }, []);
 
-  // Populate form with existing event data when editing
   useEffect(() => {
-    if (isEditing && eventDetails && !eventLoading) {
+    if (!authLoading && !isAuthenticated) navigate("/dashboard");
+  }, [authLoading, isAuthenticated, navigate]);
+
+  useEffect(() => {
+    setIsFormInitialized(false);
+  }, [eventId]);
+
+  // Populate form with event details
+  useEffect(() => {
+    if (isEditing && eventDetails && !eventLoading && !isFormInitialized) {
       setFormData({
         name: eventDetails.name || "",
         description: eventDetails.description || "",
@@ -132,29 +160,66 @@ export default function CreateEvent() {
         rsvp_limit_per_ip: eventDetails.rsvp_limit_per_ip?.toString() || "1",
         hosts:
           eventDetails.hosts?.map((host) => ({
-            person_id: host.person_id,
+            person_id: host.id,
             host_role: host.host_role || "Host",
           })) || [],
-        links: [], // Will be populated separately if needed
+        links: [],
       });
+      setIsFormInitialized(true);
     }
-  }, [isEditing, eventDetails, eventLoading]);
+  }, [isEditing, eventDetails, eventLoading, isFormInitialized]);
 
-  // Redirect if not authenticated
+  // Populate links
   useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      navigate("/dashboard");
+    if (eventLinks?.length && formData.links.length === 0) {
+      setFormData((prev) => ({
+        ...prev,
+        links: eventLinks.map((link) => ({
+          title: link.title,
+          description: link.description || "",
+          url: link.url,
+          link_type: link.link_type,
+          show_for_status: (link.show_for_status || [
+            "upcoming",
+            "ongoing",
+          ]) as EventStatus[],
+          display_order: link.display_order,
+        })),
+      }));
     }
-  }, [authLoading, isAuthenticated, navigate]);
+  }, [eventLinks, formData.links.length]);
 
-  const handleInputChange = (field: keyof EventFormData, value: any) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-    // Clear error when user starts typing
-    if (errors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: undefined }));
+  // Utility functions
+  const isValidUrl = (string: string): boolean => {
+    try {
+      new URL(string);
+      return true;
+    } catch {
+      return false;
     }
   };
 
+  const handleInputChange = (field: keyof EventFormData, value: any) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    if (errors[field]) setErrors((prev) => ({ ...prev, [field]: undefined }));
+  };
+
+  const getSelectedHosts = () => {
+    return formData.hosts.map((host) => {
+      const person = people?.find((p) => p.id === host.person_id);
+      return {
+        ...host,
+        person,
+        id: `${host.person_id}-${host.host_role}`,
+        name: person?.name || "Unknown Person",
+        role: person?.role || "Unknown Role",
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+    });
+  };
+
+  // Host management
   const addHost = (personId: string) => {
     const person = people?.find((p) => p.id === personId);
     if (person && !formData.hosts.find((h) => h.person_id === personId)) {
@@ -182,6 +247,7 @@ export default function CreateEvent() {
     }));
   };
 
+  // Link management
   const addLink = () => {
     setFormData((prev) => ({
       ...prev,
@@ -192,32 +258,32 @@ export default function CreateEvent() {
           description: "",
           url: "",
           link_type: "resource" as const,
-          show_for_status: ["upcoming", "ongoing"],
+          show_for_status: ["upcoming", "ongoing"] as EventStatus[],
         },
       ],
     }));
   };
 
-  const updateLink = (
-    index: number,
-    field: keyof CreateEventLink,
-    value: any,
-  ) => {
+  const updateLink = useCallback(
+    (index: number, field: keyof CreateEventLink, value: any) => {
+      setFormData((prev) => ({
+        ...prev,
+        links: prev.links.map((link, i) =>
+          i === index ? { ...link, [field]: value } : link,
+        ),
+      }));
+    },
+    [],
+  );
+
+  const removeLink = useCallback((indexToRemove: number) => {
     setFormData((prev) => ({
       ...prev,
-      links: prev.links.map((link, i) =>
-        i === index ? { ...link, [field]: value } : link,
-      ),
+      links: prev.links.filter((_, index) => index !== indexToRemove),
     }));
-  };
+  }, []);
 
-  const removeLink = (index: number) => {
-    setFormData((prev) => ({
-      ...prev,
-      links: prev.links.filter((_, i) => i !== index),
-    }));
-  };
-
+  // Form validation
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
 
@@ -231,42 +297,27 @@ export default function CreateEvent() {
       newErrors.rsvp_limit_per_ip = "RSVP limit must be a positive number";
     }
 
-    // Validate image URL if provided
     if (formData.image_url && !isValidUrl(formData.image_url)) {
       newErrors.image_url = "Please enter a valid URL";
     }
 
-    // Validate links
     formData.links.forEach((link, index) => {
-      if (!link.title.trim()) {
+      if (!link.title.trim())
         newErrors[`link_${index}_title`] = "Link title is required";
-      }
-      if (!link.url.trim()) {
+      if (!link.url.trim())
         newErrors[`link_${index}_url`] = "Link URL is required";
-      } else if (!isValidUrl(link.url)) {
+      else if (!isValidUrl(link.url))
         newErrors[`link_${index}_url`] = "Please enter a valid URL";
-      }
     });
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const isValidUrl = (string: string): boolean => {
-    try {
-      new URL(string);
-      return true;
-    } catch (_) {
-      return false;
-    }
-  };
-
+  // Form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!validateForm()) {
-      return;
-    }
+    if (!validateForm()) return;
 
     const eventData: CreateEventData = {
       name: formData.name,
@@ -291,13 +342,8 @@ export default function CreateEvent() {
       } else {
         await createEventMutation.mutateAsync(eventData);
       }
-
       setShowSuccessMessage(true);
-
-      // Redirect after showing success message
-      setTimeout(() => {
-        navigate("/dashboard");
-      }, 2000);
+      setTimeout(() => navigate("/dashboard"), 2000);
     } catch (error) {
       console.error(
         `Failed to ${isEditing ? "update" : "create"} event:`,
@@ -306,23 +352,14 @@ export default function CreateEvent() {
     }
   };
 
-  const sections = [
-    { id: "basic", label: "Basic Info", icon: Calendar },
-    { id: "details", label: "Details", icon: Settings },
-    { id: "hosts", label: "Hosts", icon: Users },
-    { id: "links", label: "Links", icon: LinkIcon },
-  ];
-
-  const getSelectedHosts = () => {
-    return formData.hosts.map((host) => {
-      const person = people?.find((p) => p.id === host.person_id);
-      return { ...host, person };
-    });
+  // Navigation helpers
+  const navigateSection = (direction: "prev" | "next") => {
+    const currentIndex = sections.findIndex((s) => s.id === activeSection);
+    const newIndex = direction === "prev" ? currentIndex - 1 : currentIndex + 1;
+    if (newIndex >= 0 && newIndex < sections.length) {
+      setActiveSection(sections[newIndex].id);
+    }
   };
-
-  const isLoading = authLoading || (isEditing && eventLoading);
-  const isMutating =
-    createEventMutation.isPending || updateEventMutation.isPending;
 
   // Loading state
   if (isLoading) {
@@ -359,7 +396,7 @@ export default function CreateEvent() {
 
   return (
     <div className="relative min-h-screen overflow-hidden">
-      {/* Background Layer */}
+      {/* Background */}
       <div className="fixed inset-0 -z-20">
         <div
           className="absolute inset-0"
@@ -479,7 +516,6 @@ export default function CreateEvent() {
                     <h3 className="text-xl font-semibold text-white">
                       Basic Information
                     </h3>
-
                     <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                       <div>
                         <label className="mb-2 block text-sm font-medium text-white">
@@ -797,7 +833,7 @@ export default function CreateEvent() {
 
                         <button
                           type="button"
-                          onClick={() => navigate("/admin/people/create")}
+                          onClick={() => navigate("/dashboard/people/create")}
                           className="group relative"
                         >
                           <div
@@ -915,7 +951,10 @@ export default function CreateEvent() {
                     {formData.links.length > 0 ? (
                       <div className="space-y-4">
                         {formData.links.map((link, index) => (
-                          <GlassContainer key={index} gradientOverlay={false}>
+                          <GlassContainer
+                            key={`link-${index}`}
+                            gradientOverlay={false}
+                          >
                             <div className="p-4">
                               <div className="mb-4 flex items-center justify-between">
                                 <h4 className="font-medium text-white">
@@ -1100,30 +1139,7 @@ export default function CreateEvent() {
                     {activeSection !== "basic" && (
                       <Button
                         type="button"
-                        onClick={() => {
-                          const currentIndex = sections.findIndex(
-                            (s) => s.id === activeSection,
-                          );
-                          if (currentIndex > 0) {
-                            setActiveSection(sections[currentIndex - 1].id);
-                          }
-                        }}
-                        variant="outline"
-                        className="border-white/20 bg-white/5 text-white hover:bg-white/10"
-                      >
-                        Previous
-                      </Button>
-                    )}
-
-                                        {activeSection !== "basic" && (
-                      <Button
-                        type="button"
-                        onClick={() => {
-                          const currentIndex = sections.findIndex(s => s.id === activeSection);
-                          if (currentIndex > 0) {
-                            setActiveSection(sections[currentIndex - 1].id);
-                          }
-                        }}
+                        onClick={() => navigateSection("prev")}
                         variant="outline"
                         className="border-white/20 bg-white/5 text-white hover:bg-white/10"
                       >
@@ -1136,18 +1152,15 @@ export default function CreateEvent() {
                         <div
                           className="absolute inset-0 rounded-lg border border-white/30 backdrop-blur-sm transition-all duration-300 group-hover:scale-105 group-hover:border-white/50"
                           style={{
-                            background: "linear-gradient(135deg, rgba(59, 130, 246, 0.4) 0%, rgba(99, 102, 241, 0.4) 100%)",
-                            boxShadow: "0 8px 24px rgba(59, 130, 246, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.3)",
+                            background:
+                              "linear-gradient(135deg, rgba(59, 130, 246, 0.4) 0%, rgba(99, 102, 241, 0.4) 100%)",
+                            boxShadow:
+                              "0 8px 24px rgba(59, 130, 246, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.3)",
                           }}
                         />
                         <Button
                           type="button"
-                          onClick={() => {
-                            const currentIndex = sections.findIndex(s => s.id === activeSection);
-                            if (currentIndex < sections.length - 1) {
-                              setActiveSection(sections[currentIndex + 1].id);
-                            }
-                          }}
+                          onClick={() => navigateSection("next")}
                           className="relative z-10 bg-transparent font-semibold text-white transition-all duration-300 group-hover:scale-105 hover:bg-transparent"
                         >
                           Next
@@ -1158,10 +1171,10 @@ export default function CreateEvent() {
                         <div
                           className="absolute inset-0 rounded-lg border border-white/30 backdrop-blur-sm transition-all duration-300 group-hover:scale-105 group-hover:border-white/50"
                           style={{
-                            background: isEditing 
+                            background: isEditing
                               ? "linear-gradient(135deg, rgba(234, 179, 8, 0.4) 0%, rgba(245, 158, 11, 0.4) 100%)"
                               : "linear-gradient(135deg, rgba(34, 197, 94, 0.4) 0%, rgba(16, 185, 129, 0.4) 100%)",
-                            boxShadow: isEditing 
+                            boxShadow: isEditing
                               ? "0 8px 24px rgba(234, 179, 8, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.3)"
                               : "0 8px 24px rgba(34, 197, 94, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.3)",
                           }}
@@ -1174,12 +1187,16 @@ export default function CreateEvent() {
                           {isMutating ? (
                             <>
                               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              {isEditing ? "Updating Workshop..." : "Creating Workshop..."}
+                              {isEditing
+                                ? "Updating Workshop..."
+                                : "Creating Workshop..."}
                             </>
                           ) : (
                             <>
                               <Save className="mr-2 h-4 w-4" />
-                              {isEditing ? "Update Workshop" : "Create Workshop"}
+                              {isEditing
+                                ? "Update Workshop"
+                                : "Create Workshop"}
                             </>
                           )}
                         </Button>
