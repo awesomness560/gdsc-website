@@ -19,23 +19,31 @@ import Navbar from "~/components/ui/NavBar";
 import GlassContainer from "~/components/ui/GlassContainer";
 import AnimatedSection from "~/components/ui/AnimatedSection";
 import SignInModal from "~/components/auth/SignInModal";
+import DeleteEventModal from "~/components/admin/DeleteEventModal";
 import { Button } from "~/components/ui/button";
 import { useAuth } from "~/hooks/useAuth";
-import { useEventsByStatus } from "~/hooks/useEvents";
+import { useEventsByStatus, useDeleteEvent } from "~/hooks/useEvents";
 import { useNavigate } from "react-router";
+import type { EventWithRSVPCount } from "~/types/events";
 
 export default function AdminDashboard() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [showSignInModal, setShowSignInModal] = useState(false);
+  const [eventToDelete, setEventToDelete] = useState<EventWithRSVPCount | null>(
+    null,
+  );
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const { user, isAuthenticated, isLoading, signOut, isSigningOut } = useAuth();
-
   const navigate = useNavigate();
 
   // Fetch events for dashboard stats
   const { data: groupedEvents, isLoading: eventsLoading } = useEventsByStatus({
     enabled: isAuthenticated,
   });
+
+  // Delete event mutation
+  const deleteEventMutation = useDeleteEvent();
 
   useEffect(() => {
     setTimeout(() => setIsLoaded(true), 100);
@@ -55,6 +63,30 @@ export default function AdminDashboard() {
       await signOut();
     } catch (error) {
       console.error("Sign out failed:", error);
+    }
+  };
+
+  const handleDeleteEvent = (event: EventWithRSVPCount) => {
+    setEventToDelete(event);
+    setShowDeleteModal(true);
+  };
+
+  const handleConfirmDelete = async (eventId: string) => {
+    try {
+      await deleteEventMutation.mutateAsync(eventId);
+      setShowDeleteModal(false);
+      setEventToDelete(null);
+      // Optional: Show success notification
+    } catch (error) {
+      console.error("Failed to delete event:", error);
+      // Optional: Show error notification
+    }
+  };
+
+  const handleCloseDeleteModal = () => {
+    if (!deleteEventMutation.isPending) {
+      setShowDeleteModal(false);
+      setEventToDelete(null);
     }
   };
 
@@ -439,7 +471,13 @@ export default function AdminDashboard() {
                                   </div>
 
                                   <div className="flex items-center gap-2">
-                                    <button className="rounded-lg p-2 text-white/60 transition-colors hover:bg-white/10 hover:text-white">
+                                    <button
+                                      className="rounded-lg p-2 text-white/60 transition-colors hover:bg-white/10 hover:text-white"
+                                      onClick={() =>
+                                        navigate(`/events/${event.id}`)
+                                      }
+                                      title="View Event"
+                                    >
                                       <Eye className="h-4 w-4" />
                                     </button>
                                     <button
@@ -449,10 +487,16 @@ export default function AdminDashboard() {
                                           `/dashboard/create-event/${event.id}`,
                                         )
                                       }
+                                      title="Edit Event"
                                     >
                                       <Edit className="h-4 w-4" />
                                     </button>
-                                    <button className="rounded-lg p-2 text-white/60 transition-colors hover:bg-red-500/10 hover:text-red-400">
+                                    <button
+                                      className="rounded-lg p-2 text-white/60 transition-colors hover:bg-red-500/10 hover:text-red-400"
+                                      onClick={() => handleDeleteEvent(event)}
+                                      disabled={deleteEventMutation.isPending}
+                                      title="Delete Event"
+                                    >
                                       <Trash2 className="h-4 w-4" />
                                     </button>
                                   </div>
@@ -545,6 +589,15 @@ export default function AdminDashboard() {
       <SignInModal
         isOpen={showSignInModal}
         onClose={() => setShowSignInModal(false)}
+      />
+
+      {/* Delete Event Modal */}
+      <DeleteEventModal
+        isOpen={showDeleteModal}
+        onClose={handleCloseDeleteModal}
+        event={eventToDelete}
+        onConfirm={handleConfirmDelete}
+        isDeleting={deleteEventMutation.isPending}
       />
     </div>
   );

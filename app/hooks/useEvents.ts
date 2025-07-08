@@ -7,6 +7,7 @@ import {
   checkExistingRSVP,
   toggleEventRSVP,
   getEventRSVPCount,
+  deleteEvent,
 } from "~/lib/api/events";
 import type {
   EventFilters,
@@ -192,6 +193,47 @@ export function useToggleEventRSVP() {
     },
     onError: (error) => {
       console.error("RSVP toggle failed:", error);
+    },
+  });
+}
+
+/**
+ * Mutation hook for deleting events (admin only)
+ */
+export function useDeleteEvent() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (eventId: string) => {
+      return deleteEvent(eventId);
+    },
+    onSuccess: (_, eventId) => {
+      // Remove the event from all relevant caches
+      queryClient.removeQueries({
+        queryKey: eventKeys.detail(eventId),
+      });
+
+      // Invalidate all event lists to refresh counts and remove deleted event
+      queryClient.invalidateQueries({
+        queryKey: eventKeys.lists(),
+      });
+
+      // Invalidate by status query
+      queryClient.invalidateQueries({
+        queryKey: eventKeys.byStatus(),
+      });
+
+      // Remove any RSVP-related queries for this event
+      queryClient.removeQueries({
+        queryKey: [...eventKeys.detail(eventId), "rsvp"],
+      });
+
+      queryClient.removeQueries({
+        queryKey: eventKeys.rsvpCount(eventId),
+      });
+    },
+    onError: (error) => {
+      console.error("Event deletion failed:", error);
     },
   });
 }
